@@ -6,6 +6,17 @@ import sqlite3
 import sqlalchemy
 
 def load_data(messages_filepath, categories_filepath):
+
+  '''
+  This function read the file paths for two csv files and load them
+  into two pandas dataframe
+
+  Args (str): messages_filepath,categories_filepath
+
+
+  return: None
+
+  '''
     
     messages = pd.read_csv(str(messages_filepath))
     categories =pd.read_csv(str(categories_filepath))
