@@ -9,21 +9,66 @@ def load_data(messages_filepath, categories_filepath):
 
   '''
   This function read the file paths for two csv files and load them
-  into two pandas dataframe
+  into two pandas dataframe, and return merged them to dataframe
 
   Args (str): messages_filepath,categories_filepath
 
 
-  return: None
+  return (dataframe): df
 
   '''
-    
-    messages = pd.read_csv(str(messages_filepath))
-    categories =pd.read_csv(str(categories_filepath))
+
+
+  # Read csv files  
+  messages = pd.read_csv(str(messages_filepath))
+  categories =pd.read_csv(str(categories_filepath))
+
+  # Merge datasets
+  df = pd.merge(categories,messages,on='id',how='outer')
+
+  return df
 
 
 def clean_data(df):
-    pass
+
+  '''
+  This function get a dataframe, create a dataframe by splitting
+  "categories" column string content, and only keeping the numeric part,
+  and merge thisdataframe with original dataframe, and remove dupicates
+
+  Args (dataframe): df
+
+
+  return (dataframe): df
+
+  ''' 
+
+  # Create dataframe from categories column
+
+  categories = df.categories.str.split(';',expand=True)
+  column_ = [col_.split('-')[0].strip() for col_ in list(categories.iloc[0])]
+  categories.columns = column_
+
+  # Convert category values to numeric
+
+  for column in categories.columns:
+
+    categories[column] = categories[column].astype(str)
+    categories[column] = categories[column].apply(lambda x:int(x.split('-')[1].strip()))
+
+  # Replace categories column in df with new category columns
+
+  df.drop(columns=['categories'],inplace=True)
+
+  df = pd.concat([df,categories],axis=1)
+
+  # Remove duplicates
+
+  df = df.drop_duplicates()
+
+  return df
+
+
 
 
 def save_data(df, database_filename):
