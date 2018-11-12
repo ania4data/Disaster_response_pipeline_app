@@ -72,7 +72,68 @@ def clean_data(df):
 
 
 def save_data(df, database_filename):
-    pass  
+
+  '''
+  This function read the cleaned dataframe and load that into SQLite database
+  either using sqlachemy or sqlite3
+
+  Args (dataframe): df
+
+
+  return: None
+
+  '''
+
+  # SQLAlchemy 
+
+  def save_with_alchemy(df, database_filename):
+
+    # Create engine
+    sql_engine = create_engine('sqlite:///'+str(database_filename), echo=False)
+
+    # Use this line to avoid freezing while process
+    connection = sql_engine.raw_connection()  
+
+    # Save dataframe to 'data' table
+    df.to_sql('data', connection,index=False, if_exists='replace')
+
+
+  #SQLite3
+
+  def save_with_sqlite3(df, database_filename):
+
+    # Create connection
+    conn = sqlite3.connect(str(database_filename))
+
+    # Save dataframe to 'data' table
+    df.to_sql('data', con=conn, index=False, if_exists='replace')
+
+
+  # Use alchemy
+  save_with_alchemy(df, database_filename)
+
+
+
+def test(database_filename):
+
+  '''
+  This function tests if database was saved correctly by loading it into 
+  pandas dataframe
+
+  Args (string): database_filename
+
+
+  return: None
+  '''
+
+
+  sql_engine = create_engine('sqlite:///'+str(database_filename), echo=False)
+  connection = sql_engine.raw_connection() 
+  dg= pd.read_sql("SELECT * FROM data",con=connection)
+  print('')
+  print(dg.head())
+
+
 
 
 def main():
@@ -91,6 +152,12 @@ def main():
         save_data(df, database_filepath)
         
         print('Cleaned data saved to database!')
+
+
+        print('Testing ...\n    DATABASE: {}'.format(database_filepath))
+        test(database_filepath)
+
+        print('Read from database!')
     
     else:
         print('Please provide the filepaths of the messages and categories '\
