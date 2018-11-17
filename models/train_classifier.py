@@ -23,11 +23,12 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import accuracy_score, f1_score,precision_score, recall_score
 from sklearn.metrics import make_scorer, classification_report, precision_recall_fscore_support
+from sklearn.externals import joblib
 
 
 def load_data(database_filepath):
 
-    sql_engine = create_engine('sqlite:///'+str(database_filename), echo=False)
+    sql_engine = create_engine('sqlite:///'+str(database_filepath), echo=False)
     #had to have this line otherwise froze
     connection = sql_engine.raw_connection() 
 
@@ -35,9 +36,10 @@ def load_data(database_filepath):
     print(table_name)
 
     df = pd.read_sql("SELECT * FROM '{}'".format(table_name),con=connection)
-    category_names = list(set(df.columns)-set(df[['id','message','original','genre']]))
+    category_names = list(df.columns[4:])
+    #category_names = list(set(df.columns)-set(df[['id','message','original','genre']]))
     #Remove rows when all categories not labled, or unknown '2' value
-    df = df[(df.related!=2) & (df[col].sum(axis=1)!=0)]
+    df = df[(df.related!=2) & (df[category_names].sum(axis=1)!=0)]
 
 
     X = df[['message']]  
@@ -109,12 +111,16 @@ def build_model():
         ('tfidf', TfidfTransformer()),
         ('clf_ada', MultiOutputClassifier(AdaBoostClassifier(DecisionTreeClassifier())))        
         ])
+# {'clf_ada__estimator__base_estimator__max_depth': 1,
+#  'clf_ada__estimator__n_estimators': 50,
+#  'tfidf__use_idf': False,
+#  'vect__max_features': 10000}
 
     parameters = {
-        'vect__max_features': (None, 10000),
-        'tfidf__use_idf': (True, False),
-        'clf_ada__estimator__n_estimators': [50, 100, 200],
-        'clf_ada__estimator__base_estimator__max_depth': [1, 2]
+        'vect__max_features': [10000],       #(None, 10000),
+        'tfidf__use_idf': [False],          #(True, False),
+        'clf_ada__estimator__n_estimators': [50],     #[50, 100, 200],
+        'clf_ada__estimator__base_estimator__max_depth': [1]   #[1, 2]
     }
 
     scorer = make_scorer(f1_score,average='micro')
@@ -148,7 +154,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
  
 
 
-def get_feature_importance(model, category_names):
+def get_feature_importance(model, category_names, database_filepath):
 
     best_pipeline = model.best_estimator_
 
@@ -169,7 +175,7 @@ def get_feature_importance(model, category_names):
                 #print(col,'{0:.3f}'.format(value), x_name[i])
                 col_name.append(col)
                 imp_value.append(value)
-                imp_word.append(x_name[i]
+                imp_word.append(x_name[i])
 
 
     col_name = np.array(col_name).reshape(-1,1)
@@ -182,39 +188,54 @@ def get_feature_importance(model, category_names):
     df_imp = pd.DataFrame(imp_array,columns=['category_name','importance_value','important_word'])   
 
     # Create engine
-    sql_engine = create_engine('sqlite:///'+str(database_filename), echo=False)
+    sql_engine = create_engine('sqlite:///'+str(database_filepath), echo=False)
 
     # Use this line to avoid freezing while process
     connection = sql_engine.raw_connection()  
 
     # Save dataframe to 'data' table
-    df_imp.to_sql('word', connection, index=False, if_exists='replace')     
+    df_imp.to_sql('word', connection, index=False, if_exists='replace')  
+
+    df_imp = pd.read_sql("SELECT * FROM '{}'".format('word'),con=connection)
+
+    print(df_imp.head())
+
+
 
 
 def save_model(model, model_filepath):
-    pass
+    joblib.dump(model, str(model_filepath))
 
 
 def main():
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
+        print('\n')
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
         
+        print('\n')
         print('Building model...')
         model = build_model()
         
+        print('\n')
         print('Training model...')
-        model.fit(X_train, Y_train)
+        model.fit(X_train.message.values, Y_train)
         
+        print('\n')
         print('Evaluating model...')
         evaluate_model(model, X_test, Y_test, category_names)
 
+        print('\n')
         print('Saving model...\n    MODEL: {}'.format(model_filepath))
         save_model(model, model_filepath)
 
         print('Trained model saved!')
+
+        print('\n')
+        print('Saving feature importance...')
+        get_feature_importance(model, category_names, database_filepath)
 
     else:
         print('Please provide the filepath of the disaster messages database '\
