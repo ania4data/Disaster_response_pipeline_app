@@ -176,10 +176,10 @@ def index():
         )
 
     layout_two = dict(title='Percent of True sample over all sample, per Message category',
-                      xaxis=dict(autotick=False, tickangle=-
-                      35, automargins=True),
+                      font=dict(size=15),
+                      xaxis=dict(tickangle=-30, automargins=True, font=dict(size=6),autotick=False),  #autotick=False, , 
                       yaxis=dict(title='% of True samples',
-                      automargins=True, font=dict(size=18),)
+                      automargins=True), 
 
                       )
 
@@ -284,7 +284,7 @@ def index():
         xaxis=dict(showline=False, showgrid=False, zeroline=False,),
         yaxis=dict(showline=False, showgrid=False, zeroline=False),
         font=dict(size=18),
-        plot_bgcolor=('#fff'), height=600
+        plot_bgcolor=('#fff'), height=500
     )
 
     # add plots/layouts in arrays for Json dump
