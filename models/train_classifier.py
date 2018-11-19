@@ -8,7 +8,7 @@ import time
 
 import re
 import nltk
-nltk.download(['punkt', 'wordnet','stopwords'])
+nltk.download(['punkt', 'wordnet', 'stopwords'])
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem.porter import PorterStemmer
@@ -29,26 +29,55 @@ from sklearn.tree import DecisionTreeClassifier
 
 
 def load_data(database_filepath):
+    '''loads data into dataframe for analysis
 
-    sql_engine = create_engine('sqlite:///' + str(database_filepath), echo=False)
-    #had to have this line otherwise froze
-    connection = sql_engine.raw_connection() 
+    Read the database path and load to pandas dataframe,
+    separate feature columns,and label column, removin
+    samples with no labels at all or label '2'
+
+    Args:
+      database_filepath (str): name of database containing data
+
+    Returns:
+      X (array): name of array for features
+      Y (array): name of array for multiputput labels
+      category_names (list): list of category name of array Y
+
+    '''
+
+    sql_engine = create_engine(
+        'sqlite:///' + str(database_filepath), echo=False)
+    # had to have this line otherwise froze
+    connection = sql_engine.raw_connection()
     table_name = str(sql_engine.table_names()[0])
     print('DB table names', sql_engine.table_names())
 
     df = pd.read_sql("SELECT * FROM '{}'".format(table_name), con=connection)
     category_names = list(df.columns[4:])
-    #Remove rows when all categories not labled, or unknown '2' value
-    df = df[(df.related!=2) & (df[category_names].sum(axis=1)!=0)]
+    # Remove rows when all categories not labled, or unknown '2' value
+    df = df[(df.related != 2) & (df[category_names].sum(axis=1) != 0)]
     # if do df[['message']], later need get df.message
-    X = df['message'] 
+    X = df['message']
     Y = df.drop(columns=['id', 'message', 'original', 'genre'])
 
     return X, Y, category_names
 
-    
+
 def tokenize(text):
-    
+    '''process the text into cleaned tokens
+
+    The text is processed by removing links,emails, ips,
+    keeping only alphabet a-z in lower case, then
+    test split into individual tokens, stop word is removed,
+    and words lemmatized to their original stem
+
+    Args:
+      text (str): a message in text form
+
+    Returns:
+      clean_tokens (array): array of words after processing
+    '''
+
     url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     emails_regex = '[a-zA-Z0-9+_\-\.]+@[0-9a-zA-Z][.-0-9a-zA-Z]*.[a-zA-Z]+'
     ips_regex = '(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})'
@@ -59,10 +88,10 @@ def tokenize(text):
     text = text.replace("(", "")
     text = text.replace(")", "")  
 
-    # get list of all urls/emails/ips using regex
+    # Get list of all urls/emails/ips using regex
     detected_urls = re.findall(url_regex, text) 
     detected_emails = re.findall(emails_regex, text)
-    # remove white spaces detected ar end of some urls
+    # Remove white spaces detected ar end of some urls
     detected_emails = [email.split()[0] for email in detected_emails]
     detected_ips = re.findall(ips_regex, text)
             
@@ -91,18 +120,33 @@ def tokenize(text):
         if((tok not in stopword_list) and (tok not in placeholder_list) and len(tok) > 2):      
             clean_tok = lemmatizer.lemmatize(lemmatizer.lemmatize(tok.strip()), pos='v')
             # Remove Stemmer for better word recognition in app 
-            #clean_tok = PorterStemmer().stem(clean_tok)
+            # clean_tok = PorterStemmer().stem(clean_tok)
             clean_tokens.append(clean_tok)
 
     return clean_tokens
 
 
 def build_model():
+    '''build a model pipeline
+
+    Function builds a pipeline by combining, tokenize
+    function, index the words by CountVectorize and calculate
+    frequencies using TfidfTransformers, apply Adaboost with
+    base model decision tree on every category using
+    Multioutputclassifier. Optimize model using cross valicdation with
+    f1score as metric.
+
+    Args:
+      None
+
+    Returns:
+      scikit learn pipeline model
+    '''    
 
     pipeline = Pipeline([
-        ('vect', CountVectorizer(tokenizer=tokenize)), 
+        ('vect', CountVectorizer(tokenizer=tokenize)),
         ('tfidf', TfidfTransformer()),
-        # RF extremely slow, no benefit, overfitting train, xgboost not worked
+        # RF extremely slow, no benefit, overfitting train; xgboost not worked
         ('clf_ada', MultiOutputClassifier(AdaBoostClassifier(DecisionTreeClassifier())))        
         ])
 
@@ -117,7 +161,7 @@ def build_model():
         'clf_ada__estimator__base_estimator__max_depth': [1, 2]   
     }
 
-    # auc(micro) did not change results much over f1
+    # score_auc(_rocmicro) did not change results much over f1
     scorer = make_scorer(f1_score,average='micro')
     # job = -1 improve time 30%
     cv = GridSearchCV(pipeline, param_grid=parameters, scoring=scorer, cv=3, verbose=2, n_jobs=-1)
@@ -126,6 +170,21 @@ def build_model():
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    '''evaluate the trained model on test data
+
+    Function prints the model performance on test dataset,
+    and prints multiple metrics (precision, recall, f1score)
+    with various averaging
+
+    Args:
+      model (scikit learn pipeline): name of model
+      X_test (dataframe): testdata features
+      Y_test (dataframe): multiout put testdata labels
+
+    Returns:
+      None
+
+    '''  
 
     y_pred_test=model.predict(X_test.values)
     for count, col in enumerate(category_names):
@@ -145,6 +204,21 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
  
 def get_feature_importance(model, category_names, database_filepath):
+    '''collect important features from model in database
+
+    Function get the weights of most important (words)
+    features, their weights, and the category in database
+    'word' table after training
+
+    Args:
+      model (scikit learn pipeline): name of model
+      category_names (list): list of category name of array Y
+      database_filepath (str): name of database containing data
+
+    Returns:
+      None
+
+    ''' 
 
     # need .best_estimator to access pipeline dictionary
     best_pipeline = model.best_estimator_
@@ -163,14 +237,14 @@ def get_feature_importance(model, category_names, database_filepath):
                 imp_value.append(value)
                 imp_word.append(x_name[i])
 
-    # get columns of data
+    # Get columns of data
     col_name = np.array(col_name).reshape(-1, 1)
     imp_value = np.array(imp_value).reshape(-1, 1)
     imp_word = np.array(imp_word).reshape(-1, 1)
     imp_array = np.concatenate((col_name, imp_value, imp_word), axis=1)
 
     df_imp = pd.DataFrame(imp_array, columns=['category_name', 'importance_value', 'important_word'])  
-    # need to get float after uniform str from np.concat 
+    # Need to get float after uniform str from np.concat 
     df_imp.importance_value = pd.to_numeric(df_imp.importance_value, downcast='float')
 
     # Create engine
@@ -182,11 +256,23 @@ def get_feature_importance(model, category_names, database_filepath):
     # Save dataframe to 'data' table
     df_imp.to_sql('word', connection, index=False, if_exists='replace')  
     df_imp = pd.read_sql("SELECT * FROM '{}'".format('word'), con=connection)
-    print(df_imp)
+    print('Sample feature importance...')
+    print(df_imp.head())
 
 
 def save_model(model, model_filepath):
-    # save model, saving pipline itself or cv do the same
+    '''saving the model after trai and evaluation
+    
+    Args:
+      model (scikit learn pipeline): name of model
+      database_filepath (str): name of database containing data
+
+    Returns:
+      None
+
+    '''
+
+    # Save model, saving pipline itself or cv do the same
     joblib.dump(model, str(model_filepath))
 
 
@@ -196,7 +282,7 @@ def main():
         print('\n')
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
-        # fix test_size and random state for better feature imp words
+        # Fixxed test_size and random state to 33%, 42 for better feature imp words need for 'word' 
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
         
         print('\n')
