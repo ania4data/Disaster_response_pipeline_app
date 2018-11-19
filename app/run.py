@@ -12,27 +12,70 @@ from plotly.graph_objs import Bar
 from sklearn.externals import joblib
 import sqlalchemy
 from sqlalchemy import create_engine
-import plotly
+import json, plotly
 # tutorial suggestion did not work
 #import plotly.graph_objs as go
 # this worked instead
 from plotly.graph_objs import *
 import plotly.plotly as py
-
+import re
+import nltk
+nltk.download(['stopwords'])
+from nltk.corpus import stopwords
 
 
 app = Flask(__name__)
 
+
 def tokenize(text):
-    tokens = word_tokenize(text)
+    
+    url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    emails_regex = '[a-zA-Z0-9+_\-\.]+@[0-9a-zA-Z][.-0-9a-zA-Z]*.[a-zA-Z]+'
+    ips_regex = '(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})'
+    stopword_list = stopwords.words('english')
+    placeholder_list = ['urlplaceholder', 'emailplaceholder', 'ipplaceholder']
+    
+    # Remove extra paranthesis for better URL detection
+    text = text.replace("(", "")
+    text = text.replace(")", "")  
+
+    # get list of all urls/emails/ips using regex
+    detected_urls = re.findall(url_regex, text) 
+    detected_emails = re.findall(emails_regex, text)
+    # remove white spaces detected ar end of some urls
+    detected_emails = [email.split()[0] for email in detected_emails]
+    detected_ips = re.findall(ips_regex, text)
+            
+    # Remove numbers and special characters, help down vocab size
+    pattern = re.compile(r'[^a-zA-Z]') 
+    stopword_list = stopwords.words('english')
+
+    for url in detected_urls:
+        text = re.sub(url,'urlplaceholder', text)                     
+    for email in detected_emails:
+        text = re.sub(email,'emailplaceholder', text)           
+    for ip in detected_ips:
+        text = re.sub(ip,'ipplaceholder', text)             
+    for stop_word in stopword_list:      
+        if(stop_word in text):
+             text.replace(stop_word,'')
+
+    # remove everything except letetrs
+    text = re.sub(pattern, ' ', text)
+    # initilize
+    tokens = word_tokenize(text.lower())
     lemmatizer = WordNetLemmatizer()
 
     clean_tokens = []
     for tok in tokens:
-        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-        clean_tokens.append(clean_tok)
+        if((tok not in stopword_list) and (tok not in placeholder_list) and len(tok) > 2):      
+            clean_tok = lemmatizer.lemmatize(lemmatizer.lemmatize(tok.strip()), pos='v')
+            # Remove Stemmer for better word recognition in app 
+            #clean_tok = PorterStemmer().stem(clean_tok)
+            clean_tokens.append(clean_tok)
 
     return clean_tokens
+
 
 # load data
 sql_engine = create_engine('sqlite:///DisasterResponse_est50_vocabnone_size33_rn42.db')
@@ -40,21 +83,26 @@ connection = sql_engine.raw_connection()
 df_data = pd.read_sql("SELECT * FROM '{}'".format('data'), con=connection)
 df_word = pd.read_sql("SELECT * FROM '{}'".format('word'), con=connection)
 category_names = list(df_data.columns[4:])
-#df_data = pd.read_sql_table('data', sql_engine)
-#df_word = pd.read_sql_table('word', sql_engine)
 
 # load model
-#model = joblib.load("model_est50_vocabnone_size33_rn42.joblib")
-model = joblib.load("best_model.joblib")
+model = joblib.load("model_est50_vocabnone_size33_rn42.joblib")
 print('')
 
 df_word_subset = df_word[df_word.category_name.isin(['cold', 'storm', 'shelter', 'weather_related', 'clothing', 'infrastructure_related', 'buildings'])]
 
+
+# print(len(list(set(df_word.important_word))))
+# print(np.unique(df_word.important_word,return_counts=True)[0])
+# print(np.unique(df_word.important_word,return_counts=True)[1])
+
+
+unique_category_all = list(set(df_word.category_name))
+unique_word_all = list(set(df_word.important_word))
+
 unique_category = list(set(df_word_subset.category_name))
 unique_word = list(set(df_word_subset.important_word))
 
-print(list(set(df_word_subset.category_name)))
-print(list(set(df_word_subset.important_word)))
+# print(df_word.important_word.values)
 
 dict_category_word = {}
 
@@ -71,18 +119,19 @@ for category in unique_category:
             dict_category_word[category].append(float(0))
 
 
-print(dict_category_word)
+# print(dict_category_word)
 
 
 category_active = [np.round(df_data[str(category)].sum()*100/df_data.shape[0]) for category in category_names]
 
-print(category_active)
+#print(category_active)
 
 heatmap_array = []
 for category in unique_category:
     heatmap_array.append(dict_category_word[category])
 
-print(heatmap_array)
+# print(heatmap_array)
+
 
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
@@ -95,10 +144,6 @@ def index():
     genre_names = list(genre_counts.index)
     
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
-
-    graphs = []
-
     # Graph1
 
     graph_one = []
@@ -113,9 +158,8 @@ def index():
     layout_one = dict(title = 'Distribution of Message Genres',
                 xaxis = dict(title = 'Genre'),
                 yaxis = dict(title = 'Count'),
-                )  
-
-    graphs.append(dict(data=graph_one, layout=layout_one))
+                font= dict(size=18),
+                )   
 
     # Graph2
 
@@ -132,11 +176,9 @@ def index():
 
     layout_two = dict(title = 'Percent of True sample over all sample, per Message category',
                 xaxis = dict(autotick= False, tickangle=-35, automargins=True),
-                yaxis = dict(title = '% of True samples', automargins=True)
+                yaxis = dict(title = '% of True samples', automargins=True, font= dict(size=18),)
                 
                 )  
-
-    graphs.append(dict(data=graph_two, layout=layout_two))
 
     # Graph3
 #['blanket', 'well', 'clothe', 'rain', 'flood', 'shelter', 'avalanche', 'damage', 'tent', 'earthquake', 'destroy', 'hurricane', 'snow', 'snowfall', 'wind']
@@ -148,7 +190,7 @@ def index():
       opacity=0.6,
       name = 'Cold',
       text = 'Cold',
-      #width = [1.5,1.5,1.5,1.5,1.5,1.5,7.5,1.5,1.5,1.5,1.5,1.5,7.5,7.5,1.5]
+      width = 0.3
       #orientation = 'h'
       )
 
@@ -158,7 +200,8 @@ def index():
       marker=dict(color='rgb(49,130,189)'),
       opacity=0.76,
       name = 'Storm',
-      text = 'Storm'
+      text = 'Storm',
+      width = 0.3
       #orientation = 'h'
       )
 
@@ -168,7 +211,8 @@ def index():
       marker=dict(color='rgb(204,204,204)'),
       opacity=0.9,
       name = 'Shelter',
-      text = 'Shelter'
+      text = 'Shelter',
+      width = 0.3
       #orientation = 'h'
       )
 
@@ -178,7 +222,8 @@ def index():
       marker=dict(color='rgb(244,109,67)'),
       opacity=0.4,
       name = 'Weather_related',
-      text = 'Weather_related'
+      text = 'Weather_related',
+      width = 0.3
       ##orientation = 'h'
       )
 
@@ -189,7 +234,8 @@ def index():
       marker=dict(color='rgb(102,205,170)'),
       opacity=0.6,
       name = 'Clothing',
-      text = 'Clothing'
+      text = 'Clothing',
+      width = 0.3
       ##orientation = 'h'
       )
 
@@ -199,7 +245,8 @@ def index():
       marker=dict(color='rgb(100,149,237)'),
       opacity=0.6,
       name = 'Infrastructure_related',
-      text = 'Infrastructure_related'
+      text = 'Infrastructure_related',
+      width = 0.3
       ##orientation = 'h'
       )
 
@@ -209,21 +256,20 @@ def index():
       marker=dict(color='rgb(160,82,45)'),
       opacity=0.6,
       name = 'Buildings',
-      text = 'Buildings'
+      text = 'Buildings',
+      width = 0.3
       ##orientation = 'h'
       )   
 
-    #['cold', 'storm', 'shelter', 'weather_related', 'clothing', 'infrastructure_related', 'buildings']
 
-    layout_three = dict(title = 'Words importances per category',
-                xaxis = dict(autotick= False, tickangle=0, automargins=True),
+    layout_three = dict(title = 'Words importances per category after training (few columns)',
+                xaxis = dict(autotick= False, tickangle=-35,),
                 yaxis = dict(title = 'Weights', automargins=True),
-                hovermode= 'closest' #, barmode='group',               
+                hovermode= 'closest', 
+                font= dict(size=18),#barmode='group',               
                 )  
 
     graph_three = [trace1, trace2, trace3, trace4, trace5, trace6, trace7]
-
-    graphs.append(dict(data=graph_three, layout=layout_three))
 
     # Graph4
 
@@ -236,49 +282,24 @@ def index():
                    x=unique_word,
                    y=unique_category,
                    opacity=0.6,
-                   xgap = 15,
-                   ygap = 15,
+                   xgap = 3,
+                   ygap = 3,
                    colorscale='Jet')]
-                   #[[0.0, 'rgb(165,0,38)'], [0.1111111111111111, 'rgb(215,48,39)'],
-                   #[0.2222222222222222, 'rgb(244,109,67)'], [0.3333333333333333, 'rgb(253,174,97)'],
-                   #[0.4444444444444444, 'rgb(254,224,144)'], [0.5555555555555556, 'rgb(224,243,248)'],
-                   #[0.6666666666666666, 'rgb(171,217,233)'], [0.7777777777777778, 'rgb(116,173,209)'],
-                   #[0.8888888888888888, 'rgb(69,117,180)'], [1.0, 'rgb(49,54,149)']]
                    
-
-    #graph_four=[trace]
-
     layout_four = dict(
-            title='Category name vs. most important words',
-            xaxis = dict(ticks='', nticks=36),
-            yaxis = dict(ticks='' )
+            title='Few category name vs. their most important words after training',
+            xaxis = dict(showline = False, showgrid = False, zeroline = False,),
+            yaxis = dict(showline = False, showgrid = False, zeroline = False),
+            font= dict(size=18),
+            plot_bgcolor=('#fff'), height=600
     )
 
 
+    graphs = []
     graphs.append(dict(data=graph_four, layout=layout_four))
-
-    print(category_active)
-
-    # graphs = [
-    #     {
-    #         'data': [
-    #             Bar(
-    #                 x=genre_names,
-    #                 y=genre_counts
-    #             )
-    #         ],
-
-    #         'layout': {
-    #             'title': 'Distribution of Message Genres',
-    #             'yaxis': {
-    #                 'title': "Count"
-    #             },
-    #             'xaxis': {
-    #                 'title': "Genre"
-    #             }
-    #         }
-    #     }
-    # ]
+    graphs.append(dict(data=graph_two, layout=layout_two))
+    graphs.append(dict(data=graph_three, layout=layout_three))
+    graphs.append(dict(data=graph_one, layout=layout_one))
     
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
@@ -308,7 +329,6 @@ def go():
 
 def main():
     app.run(host='0.0.0.0', port=3001, debug=True)
-
 
 if __name__ == '__main__':
     main()
