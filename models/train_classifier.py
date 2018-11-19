@@ -102,7 +102,7 @@ def build_model():
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)), 
         ('tfidf', TfidfTransformer()),
-        # RF extremely slow, no benefit, overftiing train
+        # RF extremely slow, no benefit, overfitting train, xgboost not worked
         ('clf_ada', MultiOutputClassifier(AdaBoostClassifier(DecisionTreeClassifier())))        
         ])
 
@@ -117,6 +117,7 @@ def build_model():
         'clf_ada__estimator__base_estimator__max_depth': [1, 2]   
     }
 
+    # auc(micro) did not change results much over f1
     scorer = make_scorer(f1_score,average='micro')
     # job = -1 improve time 30%
     cv = GridSearchCV(pipeline, param_grid=parameters, scoring=scorer, cv=3, verbose=2, n_jobs=-1)
