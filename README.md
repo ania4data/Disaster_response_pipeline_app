@@ -4,7 +4,13 @@
 <img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/wordcloud_twitter_disaster.jpg", style="width:30%">
 </p>
 
-# App layout
+# Deployed Heroku app online
+
+https://disasterresponseapp.herokuapp.com/
+
+
+# Repository layout
+
 ```
 ├── app
 │   ├── best_model.joblib
@@ -43,7 +49,10 @@
 │   └── train_classifier.py
 │
 ├── LICENSE
-└── README.md
+├── README.md
+│
+└── Disaster_response_app
+
 ```
 ## General repository content:
 
@@ -55,6 +64,7 @@
 - ETL_pipeline_prep and ML_pipeline_prep: Jupyter notebooks regarding the project (not needed for app)
 - LICENSE file
 - README.md file
+- Disaster_reponse_app folder: this folder contain all the files needed to create the app online. It is important to note that while main structure of repository support app on the local host, the layout for hosting the app on a server require additional files and chnaged to `*.py` file. In case interestednecessary layout for online hosting. For more info see end of the README.md file
 
 
 ## How to run the code:
@@ -92,8 +102,34 @@
 <img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/category_selection_app.png", style="width:30%">
 </p>
 
-## Preliminary Heroku app
+## Some Discussion on app deployment online
 
-The custom tokenizer function within the pipeline when model deployed on heroku is not properly called after many attempts, even though it works ok on local machine. It seems the problem is due to pickle function hierarchy. Therefore, app is deployed using trained model with scikit embedded tokenizer. The performance is not as great as cutom fucntion for this reason. One remedy can be cleaning the messages in the dabase from links/stop words, and also lemmanize and save to db and then use this arrays as input to the model, without directly calling custom tokenizer within pipeline.
+After cloning the repository, use diaster_response_app folder from now on only:
 
-https://disasterresponseapp.herokuapp.com/
+- Create a virtual enviroment where `requirements.txt` is located: 
+```
+conda update python
+python3 -m venv name_of_your_choosing
+source name_of_your_choosing/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt                      # install packages in requirement
+```
+- you can also follow similar instruction as listed here:
+
+https://github.com/ania4data/World_happiness_app/blob/master/README.md
+
+IMPORTANT: In addition of creating Procfile, __init__ file, and modifying several other file including run.py, disasterresponse.py, within `wrangling_scripts/wrangle_data.py` following class is added:
+
+```
+class CustomUnpickler(pickle.Unpickler):
+
+    def find_class(self, module, name):
+        if name == 'tokenize':
+            from files.essential import tokenize
+            return tokenize
+        return super().find_class(module, name)
+
+model = CustomUnpickler(open('files/best_model_serial_wtokenizer.pkl', 'rb')).load()
+ ```   
+ Without this class model built using train_classifer_pkl.py even though successfully generate a working model (with tokenizer) in local host, it can not be depoloyed. The reason is due to pickle function hierarchy and the fact that creating pkl file within train_classifer_pkl.py happened in the __main__ function. When model depolyed, the structure of the model pipeline is understood but not custom functions e.g.(tokenize) within them. In the app whre the pkl file is loaded again, the app has no knowledge of __main__, and this type of error is reported `Can't get attribute 'tokenize' on <module '__main__'` By using a Custompickler function before loading the app, the class overwrite initirinsic pickle `find_class` function and provide it a direct address to tokenize function (within essetial.py). So simply importing the tokenize on top of the wrangle_data.py was not enough. Need to also add that for consistency and due to sklearn warinig only pickle dump and load are used (instead of joblib). Also see https://stackoverflow.com/questions/27732354/unable-to-load-files-using-pickle-and-multiple-modules/27733727#27733727
+
