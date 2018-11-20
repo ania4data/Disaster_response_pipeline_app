@@ -91,3 +91,9 @@
 <p align="center"> 
 <img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/category_selection_app.png", style="width:30%">
 </p>
+
+## Preliminary Heroku app
+
+The custom tokenizer function within the pipeline when model deployed on heroku is not properly called after many attempts, even though it works ok on local machine. It seems the problem is due to pickle function hierarchy. Therefore, app is deployed using trained model with scikit embedded tokenizer. The performance is not as great as cutom fucntion for this reason. One remedy can be cleaning the messages in the dabase from links/stop words, and also lemmanize and save to db and then use this arrays as input to the model, without directly calling custom tokenizer within pipeline.
+
+https://disasterresponseapp.herokuapp.com/
