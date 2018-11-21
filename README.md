@@ -6,7 +6,7 @@
 
 # Deployed Heroku app online
 
-https://disasterresponseapp.herokuapp.com/
+## https://disasterresponseapp.herokuapp.com/
 
 
 # Repository layout
@@ -50,6 +50,7 @@ https://disasterresponseapp.herokuapp.com/
 │
 ├── LICENSE
 ├── README.md
+├── requirement.txt
 │
 └── Disaster_response_app
 
@@ -64,12 +65,24 @@ https://disasterresponseapp.herokuapp.com/
 - ETL_pipeline_prep and ML_pipeline_prep: Jupyter notebooks regarding the project (not needed for app)
 - LICENSE file
 - README.md file
+- requirement.txt file: list of program to be pip installed in order to run the app
 - Disaster_reponse_app folder: this folder contain all the files needed to create the app online. It is important to note that while main structure of repository support app on the local host, the layout for hosting the app on a server require additional files and chnaged to `*.py` file. In case interestednecessary layout for online hosting. For more info see end of the README.md file
 
 
 ## How to run the code:
 
-0. Clone the repository use: `https://github.com/ania4data/Disaster_response_pipeline.git`
+0. Clone the repository use: `https://github.com/ania4data/Disaster_response_pipeline.git`, and pip install `requirement.txt`
+```
+conda update python
+python3 -m venv name_of_your_choosing
+source name_of_your_choosing/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt                      # install packages in requirement
+```
+you can also follow similar instruction as listed here:
+
+https://github.com/ania4data/World_happiness_app/blob/master/README.md
+
 1. Run the following commands in the project's root directory to set up your database and model.
 
     - To run ETL pipeline that cleans data and stores in database
@@ -79,7 +92,7 @@ https://disasterresponseapp.herokuapp.com/
         `python models/train_classifier.py data/DisasterResponse.db models/model.joblib`
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/evaluation_matrix.png", style="width:30%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/evaluation_matrix.png" height="100" style="width:30%">
 </p>
 
 2. After replacing the database name and model pickle file in `run.py` with ones in `step1`, Run the following command in the app's directory to run your web app.
@@ -88,7 +101,7 @@ https://disasterresponseapp.herokuapp.com/
 3. Go to http://0.0.0.0:3001/
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/front_page.png", style="width:30%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/front_page.png" style="width:30%">
 </p>
 
 ## Some discussion about the unbalanced categories:
@@ -99,10 +112,11 @@ https://disasterresponseapp.herokuapp.com/
 - Even after considering different metrics to deal with unbalanced categories, prediction is not ideal. More obvious remedy is collecting more data in those specific scenraios. Down sampling the negative class is also an option when the vocabulary integrity will not get jeopardized.
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/category_selection_app.png", style="width:30%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/category_selection_app.png" style="width:30%">
 </p>
 
-## Some Discussion on app deployment online
+
+## Some Discussion on app deployment online (not local host)
 
 After cloning the repository, use diaster_response_app folder from now on only:
 
