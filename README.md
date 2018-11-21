@@ -92,7 +92,7 @@ https://github.com/ania4data/World_happiness_app/blob/master/README.md
         `python models/train_classifier.py data/DisasterResponse.db models/model.joblib`
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/evaluation_matrix.png" height="100" style="width:30%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/evaluation_matrix.png" height="500" style="width:30%">
 </p>
 
 2. After replacing the database name and model pickle file in `run.py` with ones in `step1`, Run the following command in the app's directory to run your web app.
