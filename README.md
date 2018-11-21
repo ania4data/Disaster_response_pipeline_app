@@ -1,7 +1,7 @@
 # Disaster Response Pipeline Project
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/wordcloud_twitter_disaster.jpg", style="width:50%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/wordcloud_twitter_disaster.jpg", style="width:30%">
 </p>
 
 # App layout
@@ -46,12 +46,6 @@
 └── README.md
 ```
 
-<p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/wordcloud_twitter_disaster.jpg", style="width:50%">
-</p>
-
-## Instructions:
-
 ## How to run the code:
 
 0. Clone the repository use: `https://github.com/ania4data/Disaster_response_pipeline.git`
@@ -64,7 +58,7 @@
         `python models/train_classifier.py data/DisasterResponse.db models/model.joblib`
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/evaluation_matrix.png", style="width:50%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/evaluation_matrix.png", style="width:30%">
 </p>
 
 2. After replacing the database name and model pickle file in `run.py` with ones in `step1`, Run the following command in the app's directory to run your web app.
@@ -73,9 +67,9 @@
 3. Go to http://0.0.0.0:3001/
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/front_page.png", style="width:50%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/front_page.png", style="width:30%">
 </p>
 
 <p align="center"> 
-<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/category_selection_app.png", style="width:50%">
+<img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/category_selection_app.png", style="width:30%">
 </p>
