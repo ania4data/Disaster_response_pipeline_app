@@ -45,6 +45,17 @@
 ├── LICENSE
 └── README.md
 ```
+## General repository content:
+
+- data folder: two csv files, that will be processed using `process_data.py` into `DisasterResponse.db`
+- models folder: contain `train_classifier.py` that use information from the database and create clssifier for disaster messages, while saving best model to a `*.joblib` file
+- app folder: contain `run.py` where all database tables are processed into plotly plots, as well as sample of database and model created with app
+- app/static folder: contain all static images in the app
+- app/html folder: contain `*.html` files for running the app
+- ETL_pipeline_prep and ML_pipeline/prep: Jupyter notebooks regarding the project (not needed for app)
+- LICENSE file
+- README.md file
+
 
 ## How to run the code:
 
