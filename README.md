@@ -52,7 +52,7 @@
 - app folder: contain `run.py` where all database tables are processed into plotly plots, as well as sample of database and model created with app
 - app/static folder: contain all static images in the app
 - app/html folder: contain `*.html` files for running the app
-- ETL_pipeline_prep and ML_pipeline/prep: Jupyter notebooks regarding the project (not needed for app)
+- ETL_pipeline_prep and ML_pipeline_prep: Jupyter notebooks regarding the project (not needed for app)
 - LICENSE file
 - README.md file
 
@@ -80,6 +80,13 @@
 <p align="center"> 
 <img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/front_page.png", style="width:30%">
 </p>
+
+## Some discussion about the unbalanced categories:
+
+- The original csv files after merging, contained about 20% samples that did not have labels. After investigating content of those messages, it seemed that the no-label is not part of a one-hot coding strategy. Many of those messages were related to actual events (e.g. fire, aid, ...) but were not labeled. Those samples as well as ~200 rows of data with label `2` belonging to `related` category were removed. Some of these messages also showed translation from `original` message column in English to `message` column in Spanish!, keeping those messages when no translation algorithms is not applied to them before pipeline would impact the algorithm performance considering their sample size.
+- The multioutput method in the pipeline, applis Adaboost algorithm to each category. Considering its nature Adaboost puts more weight on mislabled samples during the training. This seems suitable over methods such is Random Forest that are less accurate and slower.
+- The data for several categories is highly unbalanced with even less than 2% sample for positive class. Therefore using accuracy metrics is inappropriate for the optimization task. Since accuracy will not penalize the class with low sample size. For example for a very important category `missing` the positive label was less than `5%` of the data. Mis-identifying the missing people messages (high False negative rate) is extremely consequetial. Another side of the story is identifying events incorrectly, for example algorithm predict `fire` incorrectly, or have high false positive rate, which can lead to sending resource to places that are not affected. This is also costly. So a delicated balance between handling `FN` and `FP` is needed. For this analysis, recall metrics to catch the `FN` and precision to get `FP`, Fscore (F1, F_beta), or roc_auc_score are more appropriate. In order to ensure better performance algorithm is opimized using f1_score (combination of recall and precision) but also tested with roc_auc score, which showed not significant improvement over f1_score.
+- Even after considering different metrics to deal with unbalanced categories, prediction is not ideal. More obvious remedy is collecting more data in those specific scenraios. Down sampling the negative class is also an option when the vocabulary integrity will not get jeopardized.
 
 <p align="center"> 
 <img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/category_selection_app.png", style="width:30%">
