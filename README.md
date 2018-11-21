@@ -88,15 +88,16 @@ https://github.com/ania4data/World_happiness_app/blob/master/README.md
     - To run ETL pipeline that cleans data and stores in database
         `python data/process_data.py data/disaster_messages.csv data/disaster_categories.csv data/DisasterResponse.db`
 
-    - To run ML pipeline that trains classifier and saves it
+    - To run ML pipeline that trains classifier and saves it (make sure if don't have gpu available, in build_model function pipeline remove n_jobs=-1)
         `python models/train_classifier.py data/DisasterResponse.db models/model.joblib`
 
 <p align="center"> 
 <img src="https://github.com/ania4data/Disaster_response_pipeline/blob/master/app/static/evaluation_matrix.png" height="500" style="width:30%">
 </p>
 
-2. After replacing the database name and model pickle file in `run.py` with ones in `step1`, Run the following command in the app's directory to run your web app.
-    `python run.py`
+2. Replace the database name and model pickle file path in `app/run.py` (section load db/load model) with ones in `step1` paths you chose, Run the following command in the app's directory to run your web app. 
+
+`python run.py`
 
 3. Go to http://0.0.0.0:3001/
 
